@@ -74,18 +74,23 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 		var response interface{}
 		//check if string?
 		if reqtype, ok := request["type"]; ok {
-			tp := reqtype.(string)
-			if handler, ok := w.routes[tp]; ok {
-				resp, err := handler.Handle(request)
-				if err != nil {
-					log.Println("handler error", err)
+			if tp, ok := reqtype.(string); ok {
+				if handler, ok := w.routes[tp]; ok {
+					resp, err := handler.Handle(request)
+					if err != nil {
+						log.Println("handler error", err)
+						break
+					}
+					response = resp
+				} else {
+					log.Println("no handler for type", tp)
 					break
 				}
-				response = resp
 			} else {
-				log.Println("no handler for type", tp)
+				log.Println("type field is not a string")
 				break
 			}
+
 		}
 		if response != nil {
 			err = conn.WriteJSON(&response)
@@ -94,6 +99,5 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 				break
 			}
 		}
-
 	}
 }
