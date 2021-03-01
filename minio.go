@@ -8,6 +8,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/minio/minio-go"
+	"hash/fnv"
 	"io"
 	"log"
 	"strings"
@@ -114,6 +115,29 @@ func (c *MinioConnection) PutValue(bucket, id, data string) error {
 	return nil
 }
 
+func HashIdToRange(id string, n uint16) (int, error) {
+	strlen := len(id)
+	h := fnv.New64a()
+	written, err := h.Write([]byte(id))
+	if err != nil {
+		return 0, err
+	}
+	if written != strlen {
+		return 0, errors.New("Could not hash id")
+	}
+	val := h.Sum64()
+	modulo := uint64(n)
+	ret := val % modulo
+	return int(ret), nil
+
+}
+
+type ErrBucketDoesNotExist struct{}
+
+func (ErrBucketDoesNotExist) Error() string {
+	return "bucket does not exist"
+}
+
 func (c *MinioConnection) GetValue(bucket, id string) (string, error) {
 	minioClient, err := minio.New(c.endpoint, c.accessKeyID, c.secretAccessKey, false)
 	if err != nil {
@@ -149,12 +173,14 @@ func (c *MinioConnection) GetValue(bucket, id string) (string, error) {
 		}
 
 		return writeBuf.String(), nil
+	} else {
+		return "", ErrBucketDoesNotExist{}
 	}
 
-	return "", nil
 }
 
-//TODO ID to minio instance mapping
+// MinioGetRoute Both MinioGetRoute and MinioPutRoute assume that the minio cluster does not chage while the app is working
+//they use Hash function + modulo to select index of container from the array
 type MinioGetRoute struct {
 }
 
@@ -178,7 +204,12 @@ func (MinioGetRoute) Handle(request map[string]interface{}) (interface{}, error)
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
 	}
-	connection, err := NewMinioConnection("homework-object-storage-ws_amazin-object-storage", "9000", containers[0])
+	idx, err := HashIdToRange(id, uint16(len(containers)))
+	if err != nil {
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+	}
+	container := containers[idx]
+	connection, err := NewMinioConnection("homework-object-storage-ws_amazin-object-storage", "9000", container)
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
 	}
@@ -191,6 +222,10 @@ func (MinioGetRoute) Handle(request map[string]interface{}) (interface{}, error)
 					Data string `json:"data"`
 				}{"null"}, nil
 			}
+		} else if errors.As(err, &ErrBucketDoesNotExist{}) {
+			return struct {
+				Data string `json:"data"`
+			}{"null"}, nil
 		}
 
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
@@ -233,7 +268,12 @@ func (MinioPutRoute) Handle(request map[string]interface{}) (interface{}, error)
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
 	}
-	connection, err := NewMinioConnection("homework-object-storage-ws_amazin-object-storage", "9000", containers[0])
+	idx, err := HashIdToRange(id, uint16(len(containers)))
+	if err != nil {
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+	}
+	container := containers[idx]
+	connection, err := NewMinioConnection("homework-object-storage-ws_amazin-object-storage", "9000", container)
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
 	}
