@@ -89,3 +89,39 @@ func TestGetHandler(t *testing.T) {
 		}
 	}(c)
 }
+
+func TestInvalidRequest(t *testing.T) {
+	u := url.URL{Scheme: "ws", Host: "localhost:3000", Path: "/ws"}
+	t.Logf("connecting to %s", u.String())
+
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		t.Fatal("dial:", err)
+	}
+	req := struct {
+		Something string `json:"something"`
+	}{
+		"GET",
+	}
+
+	err = c.WriteJSON(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	response := make(map[string]interface{})
+	err = c.ReadJSON(&response)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := response["message"]; !ok {
+		t.Fatal("No error for invalid request")
+	}
+
+	defer func(c *websocket.Conn) {
+		if err := c.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}(c)
+}
