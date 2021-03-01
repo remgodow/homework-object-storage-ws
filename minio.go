@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/minio/minio-go"
+	"io"
 	"log"
 	"strings"
 )
@@ -79,18 +81,173 @@ func NewMinioConnection(network string, port string, container types.ContainerJS
 	}, nil
 }
 
+func (c *MinioConnection) PutValue(bucket, id, data string) error {
+	minioClient, err := minio.New(c.endpoint, c.accessKeyID, c.secretAccessKey, false)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	if ok, err := minioClient.BucketExists(bucket); !ok {
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		err := minioClient.MakeBucket(bucket, "")
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+	}
+
+	b := bytes.NewReader([]byte(data))
+	size := int64(b.Len())
+	written, err := minioClient.PutObject(bucket, id, b, size, minio.PutObjectOptions{})
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	if written != size {
+		log.Println("data uploaded partially")
+		return errors.New("data uploaded patrially")
+	}
+
+	return nil
+}
+
 func (c *MinioConnection) GetValue(bucket, id string) (string, error) {
 	minioClient, err := minio.New(c.endpoint, c.accessKeyID, c.secretAccessKey, false)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 		return "", err
 	}
 	if ok, err := minioClient.BucketExists(bucket); ok {
 		if err != nil {
-			log.Fatalln(err)
+			log.Println(err)
 			return "", err
 		}
-		//obj, err := minioClient.GetObject(bucket, id, nil)
+		obj, err := minioClient.GetObject(bucket, id, minio.GetObjectOptions{})
+		if err != nil {
+			log.Println(err)
+			return "nil", err
+		}
+		stat, err := obj.Stat()
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+
+		var writeBuf bytes.Buffer
+
+		written, err := io.CopyN(&writeBuf, obj, stat.Size)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+		if written != stat.Size {
+			log.Println("Object partially read")
+			return "", errors.New("Object patrially read")
+		}
+
+		return writeBuf.String(), nil
 	}
+
 	return "", nil
+}
+
+//TODO ID to minio instance mapping
+type MinioGetRoute struct {
+}
+
+func (MinioGetRoute) GetType() string {
+	return "GET"
+}
+
+func (MinioGetRoute) Handle(request map[string]interface{}) (interface{}, error) {
+	var id string
+	if idval, ok := request["id"]; !ok {
+		return ErrorResponse{Code: 400, Message: "id field is missing"}, nil
+	} else {
+		if val, ok := idval.(string); !ok {
+			return ErrorResponse{Code: 400, Message: "id field must be a string"}, nil
+		} else {
+			id = val
+		}
+	}
+
+	containers, err := getDockerContainers("amazin-object-storage-node")
+	if err != nil {
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+	}
+	connection, err := NewMinioConnection("homework-object-storage-ws_amazin-object-storage", "9000", containers[0])
+	if err != nil {
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+	}
+
+	value, err := connection.GetValue("homework", id)
+	if err != nil {
+		if merr, ok := err.(minio.ErrorResponse); ok {
+			if merr.Code == "NoSuchKey" {
+				return struct {
+					Data string `json:"data"`
+				}{"null"}, nil
+			}
+		}
+
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+	}
+
+	return struct {
+		Data string `json:"data"`
+	}{value}, nil
+}
+
+type MinioPutRoute struct {
+}
+
+func (MinioPutRoute) GetType() string {
+	return "PUT"
+}
+
+func (MinioPutRoute) Handle(request map[string]interface{}) (interface{}, error) {
+	var id, data string
+	if idval, ok := request["id"]; !ok {
+		return ErrorResponse{Code: 400, Message: "id field is missing"}, nil
+	} else {
+		if val, ok := idval.(string); !ok {
+			return ErrorResponse{Code: 400, Message: "id field must be a string"}, nil
+		} else {
+			id = val
+		}
+	}
+	if dataval, ok := request["data"]; !ok {
+		return ErrorResponse{Code: 400, Message: "data field is missing"}, nil
+	} else {
+		if val, ok := dataval.(string); !ok {
+			return ErrorResponse{Code: 400, Message: "data field must be a string"}, nil
+		} else {
+			data = val
+		}
+	}
+
+	containers, err := getDockerContainers("amazin-object-storage-node")
+	if err != nil {
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+	}
+	connection, err := NewMinioConnection("homework-object-storage-ws_amazin-object-storage", "9000", containers[0])
+	if err != nil {
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+	}
+
+	err = connection.PutValue("homework", id, data)
+	if err != nil {
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+	}
+
+	return struct {
+		Code    int16  `json:"code"`
+		Message string `json:"message"`
+	}{
+		200,
+		"OK",
+	}, nil
 }
