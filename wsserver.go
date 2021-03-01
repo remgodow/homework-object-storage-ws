@@ -75,30 +75,35 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 		err := conn.ReadJSON(&request)
 		if err != nil {
 			log.Println("Request read error:", err)
+			if _, ok := err.(*websocket.CloseError); ok {
+				break
+			}
 			response = ErrorResponse{Code: 400, Message: "Request should be a JSON"}
 		}
 
-		//check if string?
-		if reqtype, ok := request["type"]; ok {
-			if tp, ok := reqtype.(string); ok {
-				if handler, ok := w.routes[tp]; ok {
-					resp, err := handler.Handle(request)
-					if err != nil {
-						log.Println("handler error", err)
+		//do handling when no error response present
+		if response == nil {
+			if reqtype, ok := request["type"]; ok {
+				if tp, ok := reqtype.(string); ok {
+					if handler, ok := w.routes[tp]; ok {
+						resp, err := handler.Handle(request)
+						if err != nil {
+							log.Println("handler error", err)
+						}
+						response = resp
+					} else {
+						log.Println("no handler for type", tp)
+						response = ErrorResponse{Code: 400, Message: "Unknown request type"}
 					}
-					response = resp
 				} else {
-					log.Println("no handler for type", tp)
-					response = ErrorResponse{Code: 400, Message: "Unknown request type"}
+					log.Println("type field is not a string")
+					response = ErrorResponse{Code: 400, Message: "type field is not a string"}
 				}
-			} else {
-				log.Println("type field is not a string")
-				response = ErrorResponse{Code: 400, Message: "type field is not a string"}
-			}
 
-		} else {
-			log.Println("type field is missing")
-			response = ErrorResponse{Code: 400, Message: "type field is missing"}
+			} else {
+				log.Println("type field is missing")
+				response = ErrorResponse{Code: 400, Message: "type field is missing"}
+			}
 		}
 
 		if response != nil {

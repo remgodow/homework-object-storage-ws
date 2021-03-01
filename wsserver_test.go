@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/gorilla/websocket"
 	"net/url"
 	"testing"
@@ -81,7 +80,9 @@ func TestGetHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fmt.Println(response["data"].(string))
+	if _, ok := response["data"]; !ok {
+		t.Fatal("invalid response")
+	}
 
 	defer func(c *websocket.Conn) {
 		if err := c.Close(); err != nil {
@@ -105,6 +106,37 @@ func TestInvalidRequest(t *testing.T) {
 	}
 
 	err = c.WriteJSON(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	response := make(map[string]interface{})
+	err = c.ReadJSON(&response)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := response["message"]; !ok {
+		t.Fatal("No error for invalid request")
+	}
+
+	defer func(c *websocket.Conn) {
+		if err := c.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}(c)
+}
+
+func TestNotAJSON(t *testing.T) {
+	u := url.URL{Scheme: "ws", Host: "localhost:3000", Path: "/ws"}
+	t.Logf("connecting to %s", u.String())
+
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		t.Fatal("dial:", err)
+	}
+
+	err = c.WriteMessage(1, []byte("something"))
 	if err != nil {
 		t.Fatal(err)
 	}
