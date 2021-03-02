@@ -24,6 +24,7 @@ const (
 func getDockerContainers(namePrefix string) ([]types.ContainerJSON, error) {
 	cli, err := client.NewClientWithOpts(client.WithHost("unix:///var/run/docker.sock"), client.WithHTTPClient(nil))
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -33,6 +34,7 @@ func getDockerContainers(namePrefix string) ([]types.ContainerJSON, error) {
 		Filters: filterNames,
 	})
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -65,6 +67,7 @@ func NewMinioConnection(network string, port string, container types.ContainerJS
 	if network, ok := networks[network]; ok {
 		endpoint += network.IPAddress + ":" + port
 	} else {
+		log.Println("Container is not connected to the network")
 		return nil, errors.New("Container is not connected to the network")
 	}
 
@@ -122,17 +125,20 @@ func (c *MinioConnection) PutValue(bucket, id, data string) error {
 	return nil
 }
 
-func HashIdToRange(id string, n uint16) (int, error) {
+func HashIdToIndex(id string, n uint16) (int, error) {
 	if n == 0 {
+		log.Println("n cannot be 0")
 		return 0, errors.New("n cannot be 0")
 	}
 	strlen := len(id)
 	h := fnv.New64a()
 	written, err := h.Write([]byte(id))
 	if err != nil {
+		log.Println(err)
 		return 0, err
 	}
 	if written != strlen {
+		log.Println("Id hashing error")
 		return 0, errors.New("Could not hash id")
 	}
 	val := h.Sum64()
@@ -162,7 +168,7 @@ func (c *MinioConnection) GetValue(bucket, id string) (string, error) {
 		obj, err := minioClient.GetObject(bucket, id, minio.GetObjectOptions{})
 		if err != nil {
 			log.Println(err)
-			return "nil", err
+			return "", err
 		}
 		stat, err := obj.Stat()
 		if err != nil {
@@ -214,7 +220,7 @@ func (MinioGetRoute) Handle(request map[string]interface{}) interface{} {
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
-	idx, err := HashIdToRange(id, uint16(len(containers)))
+	idx, err := HashIdToIndex(id, uint16(len(containers)))
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
@@ -278,7 +284,7 @@ func (MinioPutRoute) Handle(request map[string]interface{}) interface{} {
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
-	idx, err := HashIdToRange(id, uint16(len(containers)))
+	idx, err := HashIdToIndex(id, uint16(len(containers)))
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}

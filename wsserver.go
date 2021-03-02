@@ -52,6 +52,7 @@ func (w *WebsocketServer) Shutdown(ctx context.Context) error {
 	return w.httpServer.Shutdown(ctx)
 }
 
+//Use before ListenAndServe() otherwise there is a possibility of multithread issues
 func (w *WebsocketServer) AddRoute(route WebsocketRoute) {
 	w.routes[route.GetType()] = route
 }
