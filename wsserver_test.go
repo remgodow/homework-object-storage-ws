@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+const (
+	listeningPort = "3001"
+	wsPath        = "/ws"
+)
+
 type GetRoute struct {
 }
 
@@ -25,7 +30,7 @@ func (GetRoute) Handle(_ map[string]interface{}) interface{} {
 }
 
 func TestMain(m *testing.M) {
-	wssrv := NewWebsocketServer("3000", "/ws")
+	wssrv := NewWebsocketServer(listeningPort, wsPath)
 	wssrv.AddRoute(&GetRoute{})
 	go func() {
 		if err := wssrv.ListenAndServe(); err != nil {
@@ -41,7 +46,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestWebsocketHandler_ServeHTTP(t *testing.T) {
-	u := url.URL{Scheme: "ws", Host: "localhost:3000", Path: "/ws"}
+	u := url.URL{Scheme: "ws", Host: "localhost:" + listeningPort, Path: wsPath}
 	t.Logf("connecting to %s", u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
@@ -56,7 +61,7 @@ func TestWebsocketHandler_ServeHTTP(t *testing.T) {
 }
 
 func TestGetHandler(t *testing.T) {
-	u := url.URL{Scheme: "ws", Host: "localhost:3000", Path: "/ws"}
+	u := url.URL{Scheme: "ws", Host: "localhost:" + listeningPort, Path: wsPath}
 	t.Logf("connecting to %s", u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
@@ -92,7 +97,7 @@ func TestGetHandler(t *testing.T) {
 }
 
 func TestInvalidRequest(t *testing.T) {
-	u := url.URL{Scheme: "ws", Host: "localhost:3000", Path: "/ws"}
+	u := url.URL{Scheme: "ws", Host: "localhost:" + listeningPort, Path: wsPath}
 	t.Logf("connecting to %s", u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
@@ -128,7 +133,7 @@ func TestInvalidRequest(t *testing.T) {
 }
 
 func TestNotAJSON(t *testing.T) {
-	u := url.URL{Scheme: "ws", Host: "localhost:3000", Path: "/ws"}
+	u := url.URL{Scheme: "ws", Host: "localhost:" + listeningPort, Path: wsPath}
 	t.Logf("connecting to %s", u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
