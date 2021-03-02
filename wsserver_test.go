@@ -31,7 +31,7 @@ func (GetRoute) Handle(_ map[string]interface{}) interface{} {
 
 func TestMain(m *testing.M) {
 	wssrv := NewWebsocketServer(listeningPort, wsPath)
-	wssrv.AddRoute(&GetRoute{})
+	wssrv.AddMethod(&GetRoute{})
 	go func() {
 		if err := wssrv.ListenAndServe(); err != nil {
 			panic(err)

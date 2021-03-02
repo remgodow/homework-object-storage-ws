@@ -4,8 +4,8 @@ import "log"
 
 func main() {
 	wssrv := NewWebsocketServer("3000", "/ws")
-	wssrv.AddRoute(&MinioGetRoute{})
-	wssrv.AddRoute(&MinioPutRoute{})
+	wssrv.AddMethod(&MinioGetMethod{})
+	wssrv.AddMethod(&MinioPutMethod{})
 	if err := wssrv.ListenAndServe(); err != nil {
 		log.Println(err)
 		panic(err)

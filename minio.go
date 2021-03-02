@@ -195,16 +195,16 @@ func (c *MinioConnection) GetValue(bucket, id string) (string, error) {
 
 }
 
-// MinioGetRoute Both MinioGetRoute and MinioPutRoute assume that the minio cluster does not chage while the app is working
+// MinioGetMethod Both MinioGetMethod and MinioPutMethod assume that the minio cluster does not chage while the app is working
 //they use Hash function + modulo to select index of container from the array
-type MinioGetRoute struct {
+type MinioGetMethod struct {
 }
 
-func (MinioGetRoute) GetType() string {
+func (MinioGetMethod) GetType() string {
 	return "GET"
 }
 
-func (MinioGetRoute) Handle(request map[string]interface{}) interface{} {
+func (MinioGetMethod) Handle(request map[string]interface{}) interface{} {
 	var id string
 	if idval, ok := request["id"]; !ok {
 		return ErrorResponse{Code: 400, Message: "id field is missing"}
@@ -252,14 +252,14 @@ func (MinioGetRoute) Handle(request map[string]interface{}) interface{} {
 	}{value}
 }
 
-type MinioPutRoute struct {
+type MinioPutMethod struct {
 }
 
-func (MinioPutRoute) GetType() string {
+func (MinioPutMethod) GetType() string {
 	return "PUT"
 }
 
-func (MinioPutRoute) Handle(request map[string]interface{}) interface{} {
+func (MinioPutMethod) Handle(request map[string]interface{}) interface{} {
 	var id, data string
 	if idval, ok := request["id"]; !ok {
 		return ErrorResponse{Code: 400, Message: "id field is missing"}

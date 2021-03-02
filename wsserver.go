@@ -17,10 +17,10 @@ type WebsocketServer struct {
 	Path       string
 	upgrader   websocket.Upgrader
 	httpServer http.Server
-	routes     map[string]WebsocketRoute
+	methods    map[string]WebsocketMethod
 }
 
-type WebsocketRoute interface {
+type WebsocketMethod interface {
 	GetType() string
 	Handle(request map[string]interface{}) interface{}
 }
@@ -30,7 +30,7 @@ func NewWebsocketServer(port string, path string) *WebsocketServer {
 		Port:     port,
 		Path:     path,
 		upgrader: websocket.Upgrader{},
-		routes:   make(map[string]WebsocketRoute),
+		methods:  make(map[string]WebsocketMethod),
 	}
 	server.httpServer = http.Server{
 		Addr:    ":" + port,
@@ -53,8 +53,8 @@ func (w *WebsocketServer) Shutdown(ctx context.Context) error {
 }
 
 //Use before ListenAndServe() otherwise there is a possibility of multithread issues
-func (w *WebsocketServer) AddRoute(route WebsocketRoute) {
-	w.routes[route.GetType()] = route
+func (w *WebsocketServer) AddMethod(method WebsocketMethod) {
+	w.methods[method.GetType()] = method
 }
 
 func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -86,7 +86,7 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 		if response == nil {
 			if reqtype, ok := request["type"]; ok {
 				if tp, ok := reqtype.(string); ok {
-					if handler, ok := w.routes[tp]; ok {
+					if handler, ok := w.methods[tp]; ok {
 						response = handler.Handle(request)
 					} else {
 						log.Println("no handler for type", tp)
