@@ -123,6 +123,9 @@ func (c *MinioConnection) PutValue(bucket, id, data string) error {
 }
 
 func HashIdToRange(id string, n uint16) (int, error) {
+	if n == 0 {
+		return 0, errors.New("n cannot be 0")
+	}
 	strlen := len(id)
 	h := fnv.New64a()
 	written, err := h.Write([]byte(id))
