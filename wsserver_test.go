@@ -15,13 +15,13 @@ func (GetRoute) GetType() string {
 	return "GET"
 }
 
-func (GetRoute) Handle(_ map[string]interface{}) (interface{}, error) {
+func (GetRoute) Handle(_ map[string]interface{}) interface{} {
 	resp := struct {
 		Data string `json:"data"`
 	}{
 		"some data",
 	}
-	return resp, nil
+	return resp
 }
 
 func TestMain(m *testing.M) {

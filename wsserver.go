@@ -22,7 +22,7 @@ type WebsocketServer struct {
 
 type WebsocketRoute interface {
 	GetType() string
-	Handle(request map[string]interface{}) (interface{}, error)
+	Handle(request map[string]interface{}) interface{}
 }
 
 func NewWebsocketServer(port string, path string) *WebsocketServer {
@@ -86,11 +86,7 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 			if reqtype, ok := request["type"]; ok {
 				if tp, ok := reqtype.(string); ok {
 					if handler, ok := w.routes[tp]; ok {
-						resp, err := handler.Handle(request)
-						if err != nil {
-							log.Println("handler error", err)
-						}
-						response = resp
+						response = handler.Handle(request)
 					} else {
 						log.Println("no handler for type", tp)
 						response = ErrorResponse{Code: 400, Message: "Unknown request type"}
@@ -99,7 +95,6 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 					log.Println("type field is not a string")
 					response = ErrorResponse{Code: 400, Message: "type field is not a string"}
 				}
-
 			} else {
 				log.Println("type field is missing")
 				response = ErrorResponse{Code: 400, Message: "type field is missing"}

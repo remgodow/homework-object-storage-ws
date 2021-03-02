@@ -52,7 +52,7 @@ func TestMinioPut(t *testing.T) {
 	}
 
 	handler := MinioPutRoute{}
-	resp, err := handler.Handle(request)
+	resp := handler.Handle(request)
 	respBytes, err := json.Marshal(resp)
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestMinioGetRoute(t *testing.T) {
 	}
 
 	handler := MinioGetRoute{}
-	resp, err := handler.Handle(request)
+	resp := handler.Handle(request)
 	respBytes, err := json.Marshal(resp)
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +133,7 @@ func TestMinioGetNoKey(t *testing.T) {
 	}
 
 	handler := MinioGetRoute{}
-	resp, err := handler.Handle(request)
+	resp := handler.Handle(request)
 	respBytes, err := json.Marshal(resp)
 	if err != nil {
 		t.Fatal(err)

@@ -188,13 +188,13 @@ func (MinioGetRoute) GetType() string {
 	return "GET"
 }
 
-func (MinioGetRoute) Handle(request map[string]interface{}) (interface{}, error) {
+func (MinioGetRoute) Handle(request map[string]interface{}) interface{} {
 	var id string
 	if idval, ok := request["id"]; !ok {
-		return ErrorResponse{Code: 400, Message: "id field is missing"}, nil
+		return ErrorResponse{Code: 400, Message: "id field is missing"}
 	} else {
 		if val, ok := idval.(string); !ok {
-			return ErrorResponse{Code: 400, Message: "id field must be a string"}, nil
+			return ErrorResponse{Code: 400, Message: "id field must be a string"}
 		} else {
 			id = val
 		}
@@ -202,16 +202,16 @@ func (MinioGetRoute) Handle(request map[string]interface{}) (interface{}, error)
 
 	containers, err := getDockerContainers("amazin-object-storage-node")
 	if err != nil {
-		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 	idx, err := HashIdToRange(id, uint16(len(containers)))
 	if err != nil {
-		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 	container := containers[idx]
 	connection, err := NewMinioConnection("homework-object-storage-ws_amazin-object-storage", "9000", container)
 	if err != nil {
-		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 
 	value, err := connection.GetValue("homework", id)
@@ -220,20 +220,20 @@ func (MinioGetRoute) Handle(request map[string]interface{}) (interface{}, error)
 			if merr.Code == "NoSuchKey" {
 				return struct {
 					Data string `json:"data"`
-				}{"null"}, nil
+				}{"null"}
 			}
 		} else if errors.As(err, &ErrBucketDoesNotExist{}) {
 			return struct {
 				Data string `json:"data"`
-			}{"null"}, nil
+			}{"null"}
 		}
 
-		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 
 	return struct {
 		Data string `json:"data"`
-	}{value}, nil
+	}{value}
 }
 
 type MinioPutRoute struct {
@@ -243,22 +243,22 @@ func (MinioPutRoute) GetType() string {
 	return "PUT"
 }
 
-func (MinioPutRoute) Handle(request map[string]interface{}) (interface{}, error) {
+func (MinioPutRoute) Handle(request map[string]interface{}) interface{} {
 	var id, data string
 	if idval, ok := request["id"]; !ok {
-		return ErrorResponse{Code: 400, Message: "id field is missing"}, nil
+		return ErrorResponse{Code: 400, Message: "id field is missing"}
 	} else {
 		if val, ok := idval.(string); !ok {
-			return ErrorResponse{Code: 400, Message: "id field must be a string"}, nil
+			return ErrorResponse{Code: 400, Message: "id field must be a string"}
 		} else {
 			id = val
 		}
 	}
 	if dataval, ok := request["data"]; !ok {
-		return ErrorResponse{Code: 400, Message: "data field is missing"}, nil
+		return ErrorResponse{Code: 400, Message: "data field is missing"}
 	} else {
 		if val, ok := dataval.(string); !ok {
-			return ErrorResponse{Code: 400, Message: "data field must be a string"}, nil
+			return ErrorResponse{Code: 400, Message: "data field must be a string"}
 		} else {
 			data = val
 		}
@@ -266,21 +266,21 @@ func (MinioPutRoute) Handle(request map[string]interface{}) (interface{}, error)
 
 	containers, err := getDockerContainers("amazin-object-storage-node")
 	if err != nil {
-		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 	idx, err := HashIdToRange(id, uint16(len(containers)))
 	if err != nil {
-		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 	container := containers[idx]
 	connection, err := NewMinioConnection("homework-object-storage-ws_amazin-object-storage", "9000", container)
 	if err != nil {
-		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 
 	err = connection.PutValue("homework", id, data)
 	if err != nil {
-		return ErrorResponse{Code: 500, Message: "Internal Server Error"}, err
+		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 
 	return struct {
@@ -289,5 +289,5 @@ func (MinioPutRoute) Handle(request map[string]interface{}) (interface{}, error)
 	}{
 		200,
 		"OK",
-	}, nil
+	}
 }
