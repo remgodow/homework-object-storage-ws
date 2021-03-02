@@ -82,6 +82,7 @@ func NewMinioConnection(network string, port string, container types.ContainerJS
 	}
 
 	if accessKeyId == "" || secretAccessKey == "" {
+		log.Println("Missing ENV secrets")
 		return nil, errors.New("Missing ENV secrets")
 	}
 
