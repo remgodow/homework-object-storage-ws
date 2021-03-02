@@ -13,14 +13,14 @@ const (
 	wsPath        = "/ws"
 )
 
-type GetRoute struct {
+type GetMethod struct {
 }
 
-func (GetRoute) GetType() string {
+func (GetMethod) GetType() string {
 	return "GET"
 }
 
-func (GetRoute) Handle(_ map[string]interface{}) interface{} {
+func (GetMethod) Handle(_ map[string]interface{}) interface{} {
 	resp := struct {
 		Data string `json:"data"`
 	}{
@@ -31,7 +31,7 @@ func (GetRoute) Handle(_ map[string]interface{}) interface{} {
 
 func TestMain(m *testing.M) {
 	wssrv := NewWebsocketServer(listeningPort, wsPath)
-	wssrv.AddMethod(&GetRoute{})
+	wssrv.AddMethod(&GetMethod{})
 	go func() {
 		if err := wssrv.ListenAndServe(); err != nil {
 			panic(err)
