@@ -14,6 +14,13 @@ import (
 	"strings"
 )
 
+const (
+	containerNamePrefix    = "amazin-object-storage-node"
+	containerNetworkPrefix = "homework-object-storage-ws_amazin-object-storage"
+	minioPort              = "9000"
+	bucketName             = "homework"
+)
+
 func getDockerContainers(namePrefix string) ([]types.ContainerJSON, error) {
 	cli, err := client.NewClientWithOpts(client.WithHost("unix:///var/run/docker.sock"), client.WithHTTPClient(nil))
 	if err != nil {
@@ -200,7 +207,7 @@ func (MinioGetRoute) Handle(request map[string]interface{}) interface{} {
 		}
 	}
 
-	containers, err := getDockerContainers("amazin-object-storage-node")
+	containers, err := getDockerContainers(containerNamePrefix)
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
@@ -209,12 +216,12 @@ func (MinioGetRoute) Handle(request map[string]interface{}) interface{} {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 	container := containers[idx]
-	connection, err := NewMinioConnection("homework-object-storage-ws_amazin-object-storage", "9000", container)
+	connection, err := NewMinioConnection(containerNetworkPrefix, minioPort, container)
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 
-	value, err := connection.GetValue("homework", id)
+	value, err := connection.GetValue(bucketName, id)
 	if err != nil {
 		if merr, ok := err.(minio.ErrorResponse); ok {
 			if merr.Code == "NoSuchKey" {
@@ -264,7 +271,7 @@ func (MinioPutRoute) Handle(request map[string]interface{}) interface{} {
 		}
 	}
 
-	containers, err := getDockerContainers("amazin-object-storage-node")
+	containers, err := getDockerContainers(containerNamePrefix)
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
@@ -273,12 +280,12 @@ func (MinioPutRoute) Handle(request map[string]interface{}) interface{} {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 	container := containers[idx]
-	connection, err := NewMinioConnection("homework-object-storage-ws_amazin-object-storage", "9000", container)
+	connection, err := NewMinioConnection(containerNetworkPrefix, minioPort, container)
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}
 
-	err = connection.PutValue("homework", id, data)
+	err = connection.PutValue(bucketName, id, data)
 	if err != nil {
 		return ErrorResponse{Code: 500, Message: "Internal Server Error"}
 	}

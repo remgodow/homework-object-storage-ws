@@ -36,7 +36,7 @@ func NewWebsocketServer(port string, path string) *WebsocketServer {
 		Addr:    ":" + port,
 		Handler: nil,
 	}
-	http.Handle("/ws", server)
+	http.Handle(path, server)
 	return server
 }
 
